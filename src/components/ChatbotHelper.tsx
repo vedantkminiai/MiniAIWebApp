@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Brain, MessageCircle, Send, Sparkles, X } from 'lucide-react';
+import { Brain, Loader2, MessageCircle, Send, Sparkles, X } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import {
   gameMap,
@@ -9,6 +9,7 @@ import {
   lessonSequence,
   lessons,
 } from '../data/learningContent';
+import { hasOpenAIConfig, requestOpenAIChatReply } from '../lib/openaiChat';
 
 type ViewName = 'dashboard' | 'lesson' | 'game';
 
@@ -43,11 +44,14 @@ const ChatbotHelper: React.FC<ChatbotHelperProps> = ({
   const { user } = useUser();
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 1,
       role: 'bot',
-      text: "Hi! I'm the MiniAI Helper. Ask me about AI topics, your progress, or what to do next.",
+      text: hasOpenAIConfig()
+        ? "Hi! I'm the MiniAI Helper. Ask me anything about AI, your progress, or what to do next."
+        : "Hi! I'm the MiniAI Helper. Add your OpenAI API key to unlock live answers, or ask me about AI topics, your progress, or what to do next.",
     },
   ]);
 
@@ -90,6 +94,10 @@ const ChatbotHelper: React.FC<ChatbotHelperProps> = ({
 
   const appendBotMessage = (text: string) => {
     setMessages((prev) => [...prev, { id: prev.length + 1, role: 'bot', text }]);
+  };
+
+  const appendUserMessage = (text: string) => {
+    setMessages((prev) => [...prev, { id: prev.length + 1, role: 'user', text }]);
   };
 
   const handleStartRecommended = () => {
@@ -193,13 +201,39 @@ const ChatbotHelper: React.FC<ChatbotHelperProps> = ({
     return `I can help with AI topics, activity recommendations, and your progress. ${currentActivitySummary}`;
   };
 
-  const submitMessage = (rawMessage: string) => {
+  const submitMessage = async (rawMessage: string) => {
     const message = rawMessage.trim();
-    if (!message) return;
+    if (!message || isLoading) return;
 
-    setMessages((prev) => [...prev, { id: prev.length + 1, role: 'user', text: message }]);
+    const nextMessages = [...messages, { id: messages.length + 1, role: 'user' as const, text: message }];
+    appendUserMessage(message);
     setInput('');
-    appendBotMessage(generateReply(message));
+    setIsLoading(true);
+
+    try {
+      if (hasOpenAIConfig()) {
+        const reply = await requestOpenAIChatReply(
+          nextMessages
+            .filter((entry) => entry.role === 'user' || entry.role === 'bot')
+            .map((entry) => ({
+              role: entry.role === 'bot' ? 'assistant' : 'user',
+              text: entry.text,
+            })),
+          {
+            currentActivitySummary,
+            progressSummary,
+            recommendation: getRecommendation(),
+          }
+        );
+        appendBotMessage(reply);
+      } else {
+        appendBotMessage(generateReply(message));
+      }
+    } catch {
+      appendBotMessage(`${generateReply(message)} Live AI is unavailable right now, so I answered with local help instead.`);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -237,7 +271,10 @@ const ChatbotHelper: React.FC<ChatbotHelperProps> = ({
                 {quickPrompts.map((prompt) => (
                   <button
                     key={prompt}
-                    onClick={() => submitMessage(prompt)}
+                    onClick={() => {
+                      void submitMessage(prompt);
+                    }}
+                    disabled={isLoading}
                     className="rounded-full border border-cyan-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-cyan-300 hover:bg-cyan-50"
                   >
                     {prompt}
@@ -259,10 +296,21 @@ const ChatbotHelper: React.FC<ChatbotHelperProps> = ({
                   {message.text}
                 </div>
               ))}
+              {isLoading && (
+                <div className="flex items-center gap-2 rounded-2xl bg-cyan-50 px-4 py-3 text-sm text-slate-700">
+                  <Loader2 className="h-4 w-4 animate-spin text-cyan-600" />
+                  MiniAI Helper is thinking...
+                </div>
+              )}
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
               <p className="mb-3 text-sm text-slate-600">{currentActivitySummary}</p>
+              {!hasOpenAIConfig() && (
+                <p className="mb-3 text-xs font-medium text-amber-700">
+                  Live OpenAI replies are off until `VITE_OPENAI_API_KEY` is set.
+                </p>
+              )}
               <button
                 onClick={handleStartRecommended}
                 className="w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-cyan-500 px-4 py-3 font-semibold text-white shadow-lg transition-transform hover:scale-[1.01]"
@@ -284,9 +332,11 @@ const ChatbotHelper: React.FC<ChatbotHelperProps> = ({
                 onChange={(event) => setInput(event.target.value)}
                 placeholder="Ask about AI, lessons, or your progress"
                 className="flex-1 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700 outline-none transition-colors focus:border-cyan-400"
+                disabled={isLoading}
               />
               <button
                 type="submit"
+                disabled={isLoading}
                 className="rounded-2xl bg-slate-900 p-3 text-white transition-colors hover:bg-slate-800"
                 aria-label="Send message"
               >
