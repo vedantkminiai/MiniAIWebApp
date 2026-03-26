@@ -18,12 +18,21 @@ MiniAI‑Learn helps young learners explore artificial intelligence in an enjoya
 - **Interactive lessons**: Learn about pattern recognition, creative prompts, and problem-solving with hands-on activities.
 - **Prompt challenges**: Kids enter various prompts and see how the AI responds—prompt iteration promotes experimentation.
 - **Visual progress tracker**: Friendly characters and progress bars show milestones and learning achievements.
-- **Safe sandbox**: Interactive AI does not use real LLMs—everything is pre‑loaded to keep the experience fast, safe, and controllable offline.
+- **AI chatbot helper**: The app can now connect to the Gemini API for live chatbot responses, with a local fallback when no API key is configured.
+
+## 🔑 Gemini Setup
+
+1. Create a `.env` file in the project root.
+2. Copy the values from `.env.example`.
+3. Set `VITE_GEMINI_API_KEY` to your Gemini API key.
+4. Start the app with `npm run dev`.
+
+This implementation calls Gemini directly from the browser for quick setup. For production, move the API call to a backend so the key is not exposed to clients.
 
 ---
 
 ## 🧱 Tech Stack
 
 - **Frontend**: HTML5, CSS3, React (Typescript)
-- **Virtual AI engine**: A lightweight simulation layer (no external API calls) to mimic AI responses and models
+- **AI engine**: Gemini Generate Content API with a local fallback helper
 - **Hosting**: Deployed via **Netlify** for fast, scalable hosting

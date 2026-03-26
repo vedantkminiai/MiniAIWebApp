@@ -8,6 +8,7 @@ import Dashboard from './components/Dashboard';
 import LessonModule from './components/LessonModule';
 import MiniGame from './components/MiniGame';
 import Header from './components/Header';
+import ChatbotHelper from './components/ChatbotHelper';
 
 const FloatingBubbles = () => (
   <>
@@ -210,6 +211,9 @@ function App() {
     );
   }
 
+  const helperView: 'dashboard' | 'lesson' | 'game' =
+    currentView === 'lesson' || currentView === 'game' ? currentView : 'dashboard';
+
   return (
     <UserProvider initialUser={user}>
       <GameProvider>
@@ -239,6 +243,14 @@ function App() {
               />
             )}
           </main>
+
+          <ChatbotHelper
+            currentView={helperView}
+            currentLesson={currentLesson}
+            currentGame={currentGame}
+            onStartLesson={handleStartLesson}
+            onStartGame={handleStartGame}
+          />
         </div>
       </GameProvider>
     </UserProvider>
