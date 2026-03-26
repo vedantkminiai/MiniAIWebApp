@@ -9,7 +9,7 @@ import {
   lessonSequence,
   lessons,
 } from '../data/learningContent';
-import { hasOpenAIConfig, requestOpenAIChatReply } from '../lib/openaiChat';
+import { hasGeminiConfig, requestGeminiChatReply } from '../lib/geminiChat';
 
 type ViewName = 'dashboard' | 'lesson' | 'game';
 
@@ -49,9 +49,9 @@ const ChatbotHelper: React.FC<ChatbotHelperProps> = ({
     {
       id: 1,
       role: 'bot',
-      text: hasOpenAIConfig()
+      text: hasGeminiConfig()
         ? "Hi! I'm the MiniAI Helper. Ask me anything about AI, your progress, or what to do next."
-        : "Hi! I'm the MiniAI Helper. Add your OpenAI API key to unlock live answers, or ask me about AI topics, your progress, or what to do next.",
+        : "Hi! I'm the MiniAI Helper. Add your Gemini API key to unlock live answers, or ask me about AI topics, your progress, or what to do next.",
     },
   ]);
 
@@ -211,8 +211,8 @@ const ChatbotHelper: React.FC<ChatbotHelperProps> = ({
     setIsLoading(true);
 
     try {
-      if (hasOpenAIConfig()) {
-        const reply = await requestOpenAIChatReply(
+      if (hasGeminiConfig()) {
+        const reply = await requestGeminiChatReply(
           nextMessages
             .filter((entry) => entry.role === 'user' || entry.role === 'bot')
             .map((entry) => ({
@@ -229,8 +229,12 @@ const ChatbotHelper: React.FC<ChatbotHelperProps> = ({
       } else {
         appendBotMessage(generateReply(message));
       }
-    } catch {
-      appendBotMessage(`${generateReply(message)} Live AI is unavailable right now, so I answered with local help instead.`);
+    } catch (error) {
+      const details = error instanceof Error ? error.message : 'Unknown Gemini error';
+      console.error('Gemini chat request failed:', details);
+      appendBotMessage(
+        `${generateReply(message)} Live AI is unavailable right now, so I answered with local help instead. Error: ${details}`
+      );
     } finally {
       setIsLoading(false);
     }
@@ -306,9 +310,9 @@ const ChatbotHelper: React.FC<ChatbotHelperProps> = ({
 
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
               <p className="mb-3 text-sm text-slate-600">{currentActivitySummary}</p>
-              {!hasOpenAIConfig() && (
+              {!hasGeminiConfig() && (
                 <p className="mb-3 text-xs font-medium text-amber-700">
-                  Live OpenAI replies are off until `VITE_OPENAI_API_KEY` is set.
+                  Live Gemini replies are off until `VITE_GEMINI_API_KEY` is set.
                 </p>
               )}
               <button

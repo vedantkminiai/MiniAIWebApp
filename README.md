@@ -18,21 +18,21 @@ MiniAI‑Learn helps young learners explore artificial intelligence in an enjoya
 - **Interactive lessons**: Learn about pattern recognition, creative prompts, and problem-solving with hands-on activities.
 - **Prompt challenges**: Kids enter various prompts and see how the AI responds—prompt iteration promotes experimentation.
 - **Visual progress tracker**: Friendly characters and progress bars show milestones and learning achievements.
-- **AI chatbot helper**: The app can now connect to the OpenAI API for live chatbot responses, with a local fallback when no API key is configured.
+- **AI chatbot helper**: The app can now connect to the Gemini API for live chatbot responses, with a local fallback when no API key is configured.
 
-## 🔑 OpenAI Setup
+## 🔑 Gemini Setup
 
 1. Create a `.env` file in the project root.
 2. Copy the values from `.env.example`.
-3. Set `VITE_OPENAI_API_KEY` to your OpenAI API key.
+3. Set `VITE_GEMINI_API_KEY` to your Gemini API key.
 4. Start the app with `npm run dev`.
 
-This implementation calls OpenAI directly from the browser for quick setup. For production, move the API call to a backend so the key is not exposed to clients.
+This implementation calls Gemini directly from the browser for quick setup. For production, move the API call to a backend so the key is not exposed to clients.
 
 ---
 
 ## 🧱 Tech Stack
 
 - **Frontend**: HTML5, CSS3, React (Typescript)
-- **AI engine**: OpenAI Responses API with a local fallback helper
+- **AI engine**: Gemini Generate Content API with a local fallback helper
 - **Hosting**: Deployed via **Netlify** for fast, scalable hosting
