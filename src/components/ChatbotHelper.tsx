@@ -1,0 +1,312 @@
+import React, { useMemo, useState } from 'react';
+import { Brain, MessageCircle, Send, Sparkles, X } from 'lucide-react';
+import { useUser } from '../contexts/UserContext';
+import {
+  gameMap,
+  gameSequence,
+  games,
+  lessonMap,
+  lessonSequence,
+  lessons,
+} from '../data/learningContent';
+
+type ViewName = 'dashboard' | 'lesson' | 'game';
+
+interface ChatMessage {
+  id: number;
+  role: 'bot' | 'user';
+  text: string;
+}
+
+interface ChatbotHelperProps {
+  currentView: ViewName;
+  currentLesson: number | null;
+  currentGame: string | null;
+  onStartLesson: (lessonId: number) => void;
+  onStartGame: (gameId: string) => void;
+}
+
+const quickPrompts = [
+  'What should I do next?',
+  'Explain AI in simple words',
+  'Show my progress',
+  'Which game should I play?',
+];
+
+const ChatbotHelper: React.FC<ChatbotHelperProps> = ({
+  currentView,
+  currentLesson,
+  currentGame,
+  onStartLesson,
+  onStartGame,
+}) => {
+  const { user } = useUser();
+  const [isOpen, setIsOpen] = useState(false);
+  const [input, setInput] = useState('');
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      id: 1,
+      role: 'bot',
+      text: "Hi! I'm the MiniAI Helper. Ask me about AI topics, your progress, or what to do next.",
+    },
+  ]);
+
+  const nextLesson = useMemo(
+    () => lessonSequence.find((lessonId) => !user?.completedLessons.includes(lessonId)) ?? null,
+    [user]
+  );
+
+  const nextGame = useMemo(
+    () => gameSequence.find((gameId) => !user?.completedGames.includes(gameId)) ?? null,
+    [user]
+  );
+
+  const progressSummary = useMemo(() => {
+    if (!user) return '';
+    const totalActivities = lessons.length + games.length;
+    const completedActivities = user.completedLessons.length + user.completedGames.length;
+    return `${user.name}, you are on level ${user.level} with ${user.xp} XP. You have finished ${completedActivities} of ${totalActivities} activities and earned ${user.badges.length} badges.`;
+  }, [user]);
+
+  const currentActivitySummary = useMemo(() => {
+    if (currentView === 'lesson' && currentLesson) {
+      const lesson = lessonMap.get(currentLesson);
+      return lesson
+        ? `You are currently in the lesson "${lesson.title}". ${lesson.helperSummary}`
+        : '';
+    }
+
+    if (currentView === 'game' && currentGame) {
+      const game = gameMap.get(currentGame);
+      return game
+        ? `You are currently in the game "${game.title}". ${game.helperSummary}`
+        : '';
+    }
+
+    return 'You are on the dashboard, so this is a good time to pick your next lesson or game.';
+  }, [currentGame, currentLesson, currentView]);
+
+  if (!user) return null;
+
+  const appendBotMessage = (text: string) => {
+    setMessages((prev) => [...prev, { id: prev.length + 1, role: 'bot', text }]);
+  };
+
+  const handleStartRecommended = () => {
+    if (nextLesson) {
+      onStartLesson(nextLesson);
+      appendBotMessage(`Opening "${lessonMap.get(nextLesson)?.title}" for you. Have fun learning.`);
+      return;
+    }
+
+    if (nextGame) {
+      onStartGame(nextGame);
+      appendBotMessage(`Opening "${gameMap.get(nextGame)?.title}" for you. Good luck.`);
+    }
+  };
+
+  const getRecommendation = () => {
+    if (nextLesson) {
+      const lesson = lessonMap.get(nextLesson);
+      return `Your best next step is "${lesson?.title}" for ${lesson?.xpReward} XP. It fits your lesson path and keeps the sequence unlocked.`;
+    }
+
+    if (nextGame) {
+      const game = gameMap.get(nextGame);
+      return `You have finished all lessons, so try "${game?.title}" next for ${game?.xpReward} XP.`;
+    }
+
+    return 'You have completed every lesson and game in MiniAI. You can replay any activity to review your favorite topic.';
+  };
+
+  const findTopicAnswer = (message: string) => {
+    const normalized = message.toLowerCase();
+
+    const lessonMatch = lessons.find((lesson) =>
+      lesson.keywords.some((keyword) => normalized.includes(keyword))
+    );
+    if (lessonMatch) {
+      return `${lessonMatch.title}: ${lessonMatch.helperSummary}`;
+    }
+
+    const gameMatch = games.find((game) =>
+      game.keywords.some((keyword) => normalized.includes(keyword))
+    );
+    if (gameMatch) {
+      return `${gameMatch.title}: ${gameMatch.helperSummary}`;
+    }
+
+    return null;
+  };
+
+  const generateReply = (message: string) => {
+    const normalized = message.toLowerCase();
+    const topicAnswer = findTopicAnswer(message);
+
+    if (
+      normalized.includes('progress') ||
+      normalized.includes('xp') ||
+      normalized.includes('level') ||
+      normalized.includes('badge')
+    ) {
+      return progressSummary;
+    }
+
+    if (
+      normalized.includes('next') ||
+      normalized.includes('recommend') ||
+      normalized.includes('suggest') ||
+      normalized.includes('what should')
+    ) {
+      return `${getRecommendation()} ${currentActivitySummary}`;
+    }
+
+    if (
+      normalized.includes('play') ||
+      normalized.includes('game') ||
+      normalized.includes('lesson') ||
+      normalized.includes('start')
+    ) {
+      return getRecommendation();
+    }
+
+    if (
+      normalized.includes('help') ||
+      normalized.includes('what can you do') ||
+      normalized.includes('how do i use')
+    ) {
+      return 'I can explain MiniAI topics, tell you what lesson or game to try next, and summarize your progress. Try asking about neural networks, computer vision, AI bias, or your XP.';
+    }
+
+    if (
+      normalized.includes('what is ai') ||
+      normalized.includes('explain ai') ||
+      normalized === 'ai'
+    ) {
+      return 'AI is a computer system that learns from examples and patterns. It can help with tasks like recognizing images, answering questions, or organizing information.';
+    }
+
+    if (topicAnswer) {
+      return topicAnswer;
+    }
+
+    return `I can help with AI topics, activity recommendations, and your progress. ${currentActivitySummary}`;
+  };
+
+  const submitMessage = (rawMessage: string) => {
+    const message = rawMessage.trim();
+    if (!message) return;
+
+    setMessages((prev) => [...prev, { id: prev.length + 1, role: 'user', text: message }]);
+    setInput('');
+    appendBotMessage(generateReply(message));
+  };
+
+  return (
+    <>
+      {isOpen && (
+        <div className="fixed bottom-24 right-4 z-50 w-[calc(100vw-2rem)] max-w-sm rounded-[2rem] border-4 border-cyan-200 bg-white/95 shadow-2xl backdrop-blur-sm">
+          <div className="rounded-t-[1.7rem] bg-gradient-to-r from-cyan-500 via-sky-500 to-emerald-500 p-4 text-white">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="rounded-2xl bg-white/20 p-2">
+                  <Brain className="h-6 w-6" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold">MiniAI Helper</h2>
+                  <p className="text-sm text-cyan-50">Answers questions and suggests your next step</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="rounded-full bg-white/15 p-2 transition-colors hover:bg-white/25"
+                aria-label="Close chatbot helper"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-4 p-4">
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <Sparkles className="h-4 w-4 text-amber-500" />
+                Quick actions
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {quickPrompts.map((prompt) => (
+                  <button
+                    key={prompt}
+                    onClick={() => submitMessage(prompt)}
+                    className="rounded-full border border-cyan-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-cyan-300 hover:bg-cyan-50"
+                  >
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="max-h-80 space-y-3 overflow-y-auto pr-1">
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`rounded-2xl px-4 py-3 text-sm leading-6 ${
+                    message.role === 'bot'
+                      ? 'bg-cyan-50 text-slate-700'
+                      : 'ml-8 bg-emerald-500 text-white'
+                  }`}
+                >
+                  {message.text}
+                </div>
+              ))}
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+              <p className="mb-3 text-sm text-slate-600">{currentActivitySummary}</p>
+              <button
+                onClick={handleStartRecommended}
+                className="w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-cyan-500 px-4 py-3 font-semibold text-white shadow-lg transition-transform hover:scale-[1.01]"
+              >
+                Start recommended activity
+              </button>
+            </div>
+
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                submitMessage(input);
+              }}
+              className="flex items-center gap-2"
+            >
+              <input
+                type="text"
+                value={input}
+                onChange={(event) => setInput(event.target.value)}
+                placeholder="Ask about AI, lessons, or your progress"
+                className="flex-1 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700 outline-none transition-colors focus:border-cyan-400"
+              />
+              <button
+                type="submit"
+                className="rounded-2xl bg-slate-900 p-3 text-white transition-colors hover:bg-slate-800"
+                aria-label="Send message"
+              >
+                <Send className="h-5 w-5" />
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <button
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="fixed bottom-6 right-4 z-50 flex items-center gap-3 rounded-full bg-gradient-to-r from-cyan-500 to-emerald-500 px-5 py-4 text-white shadow-2xl transition-transform hover:scale-105"
+        aria-label={isOpen ? 'Hide chatbot helper' : 'Open chatbot helper'}
+      >
+        <MessageCircle className="h-5 w-5" />
+        <span className="font-semibold">{isOpen ? 'Hide helper' : 'Ask MiniAI'}</span>
+      </button>
+    </>
+  );
+};
+
+export default ChatbotHelper;

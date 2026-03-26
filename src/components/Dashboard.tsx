@@ -1,128 +1,17 @@
 import React from 'react';
 import { useUser } from '../contexts/UserContext';
-import { Brain, Trophy, Star, Gamepad2, BookOpen, Target } from 'lucide-react';
+import { Trophy, Star, Gamepad2, BookOpen, Target } from 'lucide-react';
 import ProgressBar from './dashboard/ProgressBar';
 import BadgeDisplay from './dashboard/BadgeDisplay';
 import CharacterEvolution from './dashboard/CharacterEvolution';
 import LessonCard from './dashboard/LessonCard';
 import GameCard from './dashboard/GameCard';
+import { games, gameSequence, lessons, lessonSequence } from '../data/learningContent';
 
 interface DashboardProps {
   onStartLesson: (lessonId: number) => void;
   onStartGame: (gameId: string) => void;
 }
-
-const lessons = [
-  {
-    id: 1,
-    title: "What is AI?",
-    description: "Learn the basics of artificial intelligence with fun animations!",
-    type: "animation-quiz" as const,
-    xpReward: 25,
-    icon: "🧠"
-  },
-  {
-    id: 2,
-    title: "AI vs. Human Thinking",
-    description: "Discover the differences between how AI and humans think!",
-    type: "spot-difference" as const,
-    xpReward: 30,
-    icon: "🤔"
-  },
-  {
-    id: 3,
-    title: "AI in Real Life",
-    description: "Find AI examples all around us in this matching game!",
-    type: "matching" as const,
-    xpReward: 35,
-    icon: "🌟"
-  },
-  {
-    id: 4,
-    title: "Neural Networks",
-    description: "Discover how AI learns like a brain with connected neurons!",
-    type: "animation-quiz" as const,
-    xpReward: 45,
-    icon: "🧬"
-  },
-  {
-    id: 5,
-    title: "Computer Vision",
-    description: "Learn how AI can see and understand images!",
-    type: "spot-difference" as const,
-    xpReward: 50,
-    icon: "👁️"
-  },
-  {
-    id: 6,
-    title: "AI Bias & Fairness",
-    description: "Understand why AI needs to be fair for everyone!",
-    type: "matching" as const,
-    xpReward: 55,
-    icon: "⚖️"
-  }
-];
-
-const lessonSequence = [1, 4, 5, 2, 3, 6];
-const gameSequence = [
-  'robot-training',
-  'data-sorting',
-  'quiz-battle',
-  'neural-network-builder',
-  'image-classifier',
-  'bias-detector'
-];
-
-const games = [
-  {
-    id: "robot-training",
-    title: "Train a Robot",
-    description: "Teach a virtual robot how to make decisions!",
-    type: "robot-training" as const,
-    xpReward: 40,
-    icon: "🤖"
-  },
-  {
-    id: "data-sorting",
-    title: "Sort the Data",
-    description: "Help AI organize information in this puzzle game!",
-    type: "data-sorting" as const,
-    xpReward: 35,
-    icon: "📊"
-  },
-  {
-    id: "quiz-battle",
-    title: "AI Quiz Battle",
-    description: "Test your AI knowledge in this timed challenge!",
-    type: "quiz-battle" as const,
-    xpReward: 50,
-    icon: "⚡"
-  },
-  {
-    id: "neural-network-builder",
-    title: "Build a Neural Network",
-    description: "Connect neurons to create your own AI brain!",
-    type: "neural-network-builder" as const,
-    xpReward: 60,
-    icon: "🔗"
-  },
-  {
-    id: "image-classifier",
-    title: "Image Classifier",
-    description: "Train AI to recognize different objects in pictures!",
-    type: "image-classifier" as const,
-    xpReward: 55,
-    icon: "🖼️"
-  },
-  {
-    id: "bias-detector",
-    title: "Bias Detective",
-    description: "Find and fix unfair decisions in AI systems!",
-    type: "bias-detector" as const,
-    xpReward: 65,
-    icon: "🕵️"
-  }
-];
 
 const Dashboard: React.FC<DashboardProps> = ({ onStartLesson, onStartGame }) => {
   const { user } = useUser();
